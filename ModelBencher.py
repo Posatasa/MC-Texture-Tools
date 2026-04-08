@@ -35,14 +35,28 @@ def fix(a, b):
     return min(a, b), max(a, b)
 
 # ------------------------
-# 解析 Java 模型（加入UV）
+# 解析 Java 模型（修复版）
 # ------------------------
 
 def parse_java_model(text):
     models = {}
 
+    # ✅ 全局贴图尺寸（只认这一套）
+    global_tex = [64, 64]
+
     for line in text.splitlines():
         line = line.strip()
+
+        # ---------- 全局贴图尺寸 ----------
+        m = re.search(r'textureWidth\s*=\s*(\d+)', line)
+        if m:
+            global_tex[0] = int(m.group(1))
+            continue
+
+        m = re.search(r'textureHeight\s*=\s*(\d+)', line)
+        if m:
+            global_tex[1] = int(m.group(1))
+            continue
 
         # ---------- 链式 new + addBox ----------
         m = re.search(
@@ -112,6 +126,9 @@ def parse_java_model(text):
                     models[name]["origin"] = vals[:3]
             continue
 
+        # ❌ 完全忽略 setTextureSize（关键修复点）
+        # （不要再写这段）
+
         # ---------- rotateAngle ----------
         m = re.search(r'(?:this\.)?(\w+)\s*\.\s*rotateAngle([XYZ])\s*=\s*(.*?);', line)
         if m:
@@ -135,17 +152,20 @@ def parse_java_model(text):
                 models[name]["rotation"] = [rad_to_deg(v) for v in vals]
             continue
 
-    return models
+    return models, global_tex
+
 
 # ------------------------
-# 转 bbmodel（带UV）
+# 转 bbmodel（使用全局贴图）
 # ------------------------
 
-def to_bbmodel(models):
+def to_bbmodel(models, global_tex):
 
     elements = []
     outliner = []
     groups = []
+
+    tex_w, tex_h = global_tex  # ✅ 只用全局
 
     for name, data in models.items():
         group_uuid = new_uuid()
@@ -167,7 +187,6 @@ def to_bbmodel(models):
             fx, fy, fz = cube["from"]
             tx, ty, tz = cube["to"]
 
-            # ✅ 180°修复
             x1, x2 = fix(-(px + fx), -(px + tx))
             y1, y2 = fix(-(py + fy), -(py + ty))
             z1, z2 = fix((pz + fz), (pz + tz))
@@ -209,12 +228,13 @@ def to_bbmodel(models):
             "box_uv": True
         },
         "name": "converted_model",
-        "resolution": {"width": 64, "height": 64},
+        "resolution": {"width": tex_w, "height": tex_h},
         "elements": elements,
         "outliner": outliner,
         "groups": groups,
         "textures": []
     }
+
 
 # ------------------------
 # 主程序
@@ -230,8 +250,8 @@ def main():
             with open(path, "r", encoding="utf-8") as file:
                 text = file.read()
 
-            models = parse_java_model(text)
-            bb = to_bbmodel(models)
+            models, global_tex = parse_java_model(text)
+            bb = to_bbmodel(models, global_tex)
 
             out = os.path.join(OUTPUT_DIR, f.replace(".java", ".bbmodel"))
             with open(out, "w", encoding="utf-8") as o:
@@ -239,7 +259,8 @@ def main():
 
             print("✔", f)
 
-    print("\n🎉 完成（带UV）")
+    print("\n🎉 完成（全局贴图修复版）")
+
 
 if __name__ == "__main__":
     main()
