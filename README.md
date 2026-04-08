@@ -12,3 +12,4 @@
 - 将图片拼合为动图（用于动态纹理）：将图片按帧先后顺序（AnimatedStackCutter的输出通常已经满足需要）放入GIF_source，修改GIFGenerator.py中的ticks_per_frame（暂时只能手动设置，未来考虑增加解析mcmeta），运行生成，生成于GIF_Generator下
 - 如果动图使用插值（Interpolate为true），使用GIFGenerator_interpolation.py，修改其中的DURATION
 - 批量放缩图片：将需要放缩的正方形图片放置于Zoom_space下，修改SimpleZoomer.py中的target_size，然后直接批量放缩，覆盖原来的文件
+- 将硬编码的.java转为可编辑的.bbmodel：将需要转换的.java文件放在Model_Java文件夹下，运行后输出到Model_BB。如果是反编译后（未反混淆）的文件，则在Model_Java_Obf文件夹和Model_BB_Obf文件夹操作
